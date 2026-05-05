@@ -75,11 +75,11 @@ sequenceDiagram
     participant DB as Database
 
     User->>System: Input Email & Password (Login)
-    System->>DB: Query User berdasarkan Email
-    DB-->>System: Return Data User & Password Hash
+    System->>DB: Cari Data User berdasarkan Email
+    DB-->>System: Kembalikan Data User & Hash Password
     System->>System: Validasi Password & Role (Auth)
     alt Kredensial Valid
-        System->>User: Redirect ke Dashboard (Sesuai Role)
+        System->>User: Arahkan ke Dashboard (Sesuai Role)
     else Kredensial Tidak Valid
         System-->>User: Tampilkan Error (Kredensial salah)
     end
@@ -94,20 +94,20 @@ sequenceDiagram
     participant Controller as BorrowingController
     participant DB as Database
 
-    Member->>Controller: Request Borrow Buku (book_id)
+    Member->>Controller: Ajukan Peminjaman Buku (book_id)
     Controller->>DB: Cek Data Member (limit pinjaman aktif)
-    DB-->>Controller: Return Jumlah Peminjaman (Max 3)
+    DB-->>Controller: Kembalikan Jumlah Peminjaman Aktif (Max 3)
     
     Controller->>DB: Cek Ketersediaan Stok Buku
-    DB-->>Controller: Return Stok Buku (> 0)
+    DB-->>Controller: Kembalikan Stok Buku (> 0)
     
     alt Validasi Gagal (Limit tercapai atau Stok habis)
-        Controller-->>Member: Return Error Message (Kembali ke halaman sebelumnya)
+        Controller-->>Member: Tampilkan Pesan Error (Kembali ke halaman sebelumnya)
     else Validasi Berhasil
-        Controller->>DB: Insert Data Borrowing (status: belum dikembalikan)
-        Controller->>DB: Update Table Book (stock - 1)
+        Controller->>DB: Simpan Data Peminjaman (status: belum dikembalikan)
+        Controller->>DB: Perbarui Data Buku (stok - 1)
         DB-->>Controller: Konfirmasi Commit Transaksi
-        Controller-->>Member: Return Success Message (Buku dipinjam)
+        Controller-->>Member: Tampilkan Pesan Sukses (Buku berhasil dipinjam)
     end
 ```
 
@@ -120,23 +120,23 @@ sequenceDiagram
     participant Controller as BorrowingController
     participant DB as Database
 
-    Admin->>Controller: Klik Return Buku (borrowing_id)
-    Controller->>DB: Ambil Data Peminjaman (due_date)
-    DB-->>Controller: Return Data Peminjaman
+    Admin->>Controller: Klik Pengembalian Buku (borrowing_id)
+    Controller->>DB: Ambil Data Peminjaman (tgl_jatuh_tempo)
+    DB-->>Controller: Kembalikan Data Peminjaman
     
-    Controller->>Controller: Cek Keterlambatan (today_date > due_date)
+    Controller->>Controller: Cek Keterlambatan (tgl_sekarang > tgl_jatuh_tempo)
     
     alt Terlambat
         Controller->>Controller: Hitung kalkulasi denda (selisih hari * Rp 3000)
-        Controller->>DB: Insert Data Fine (amount, payment_status: belum dibayar)
-        Controller->>DB: Update Status Borrowing (status: terlambat, return_date)
+        Controller->>DB: Simpan Data Denda (amount, status: belum dibayar)
+        Controller->>DB: Perbarui Peminjaman (status: terlambat, tgl_kembali)
     else Tepat Waktu
-        Controller->>DB: Update Status Borrowing (status: sudah dikembalikan, return_date)
+        Controller->>DB: Perbarui Peminjaman (status: sudah dikembalikan, tgl_kembali)
     end
     
-    Controller->>DB: Update Table Book (stock + 1, status: tersedia)
+    Controller->>DB: Perbarui Data Buku (stok + 1, status: tersedia)
     DB-->>Controller: Konfirmasi Update Berhasil
-    Controller-->>Admin: Return Success Message (+ Info nominal denda jika ada)
+    Controller-->>Admin: Tampilkan Pesan Sukses (+ Info nominal denda jika ada)
 ```
 
 ### 5.4. Sequence Diagram Pembayaran Denda
@@ -149,14 +149,14 @@ sequenceDiagram
     participant DB as Database
 
     Member->>Controller: Lihat Halaman Denda (/fines)
-    Controller->>DB: Query tabel Fines khusus untuk member_id tersebut
-    DB-->>Controller: Return Koleksi Denda
+    Controller->>DB: Cari Data Denda berdasarkan member_id
+    DB-->>Controller: Kembalikan Daftar Denda
     Controller-->>Member: Tampilkan View Daftar Denda
     
     Member->>Controller: Klik Bayar Denda (fine_id)
-    Controller->>DB: Update Data Fine (payment_status: sudah dibayar)
+    Controller->>DB: Perbarui Data Denda (status_bayar: sudah dibayar)
     DB-->>Controller: Konfirmasi Update
-    Controller-->>Member: Return Success Message (Pembayaran denda berhasil)
+    Controller-->>Member: Tampilkan Pesan Sukses (Pembayaran denda berhasil)
 ```
 ### DFD Level 1
 Memecah Sistem Utama ke dalam proses-proses inti (Manajemen Master, Peminjaman, dan Denda).
@@ -209,4 +209,106 @@ graph TD
     P3 -- "Hitung Keterlambatan &\nInsert Denda" --> DS4
     DS3 -- "Ambil Data Peminjaman\n& Due Date" --> P3
     DS4 -- "Ambil Data Denda" --> P3
+```
+
+## 6. Activity Diagram & Flowchart
+
+Bagian ini memodelkan alur kerja (workflow) menggunakan diagram aktivitas yang difokuskan pada aktor (menggunakan konsep *swimlanes*) dan juga bagan alir (flowchart) keseluruhan aplikasi.
+
+### 6.1. Activity Diagram: Proses Peminjaman Buku
+Alur langkah demi langkah ketika Member mencoba meminjam buku, beserta validasi yang terjadi di dalam Sistem.
+
+```mermaid
+flowchart TD
+    subgraph Member
+        A(Mulai) --> B[Login ke Sistem]
+        B --> C[Lihat Katalog Buku]
+        C --> D[Pilih Buku & Klik Pinjam]
+    end
+
+    subgraph Sistem Perpustakaan
+        D --> E{Validasi Kuota Pinjam < 3?}
+        E -- Tidak --> F[Tampilkan Pesan Gagal: Kuota Penuh]
+        E -- Ya --> G{Validasi Stok > 0?}
+        G -- Tidak --> H[Tampilkan Pesan Gagal: Stok Habis]
+        G -- Ya --> I[Simpan Data Peminjaman]
+        I --> J[Kurangi Stok Buku]
+        J --> K[Tampilkan Pesan Sukses]
+    end
+
+    F --> L(Selesai)
+    H --> L
+    K --> L
+```
+
+### 6.2. Activity Diagram: Proses Pengembalian Buku
+Alur ketika Admin memproses buku yang dikembalikan oleh Member, termasuk logika penentuan denda secara otomatis.
+
+```mermaid
+flowchart TD
+    subgraph Admin
+        A(Mulai) --> B[Buka Menu Peminjaman]
+        B --> C[Cari Data Peminjaman & Klik Return]
+    end
+
+    subgraph Sistem Perpustakaan
+        C --> D[Ambil Tanggal Jatuh Tempo]
+        D --> E{Apakah Melewati Batas?}
+        
+        E -- Ya --> F[Hitung Kalkulasi Denda]
+        F --> G[Simpan Tagihan Denda]
+        G --> H[Ubah Status Peminjaman: Terlambat]
+        
+        E -- Tidak --> I[Ubah Status Peminjaman: Sudah Dikembalikan]
+        
+        H --> J[Tambah Stok Buku]
+        I --> J
+        
+        J --> K[Tampilkan Pesan Sukses ke Admin]
+    end
+    
+    K --> L(Selesai)
+```
+
+### 6.3. Flowchart Utama Aplikasi
+Bagan alir yang merangkum fungsionalitas keseluruhan aplikasi berdasarkan peran pengguna (*Role*).
+
+```mermaid
+flowchart TD
+    Start([Mulai]) --> Login[Input Kredensial Login]
+    Login --> Validasi{Validasi Kredensial?}
+    
+    Validasi -- Gagal --> FailLogin[Tampilkan Pesan Error] --> Login
+    Validasi -- Sukses --> CekRole{Pengecekan Hak Akses}
+    
+    %% Cabang Admin
+    CekRole -- Admin --> DashAdmin[Masuk Dashboard Admin]
+    DashAdmin --> MenuAdmin{Pilih Fitur}
+    
+    MenuAdmin -->|Kelola Buku| KelolaBuku[Manajemen Master Buku]
+    MenuAdmin -->|Kelola Kategori| KelolaKat[Manajemen Master Kategori]
+    MenuAdmin -->|Kelola Member| KelolaMem[Manajemen Data Member]
+    MenuAdmin -->|Peminjaman| KelolaPinjam[Proses Pengembalian / Keterlambatan]
+    
+    %% Cabang Member
+    CekRole -- Member --> DashMember[Masuk Dashboard Member]
+    DashMember --> MenuMember{Pilih Fitur}
+    
+    MenuMember -->|Katalog / Pinjam| Pinjam[Pilih Buku & Lakukan Peminjaman]
+    MenuMember -->|Riwayat| Riwayat[Lihat Status Peminjaman Aktif]
+    MenuMember -->|Denda| Denda[Lihat Tagihan & Bayar Denda]
+    MenuMember -->|Profil| Profil[Ubah Pengaturan Akun]
+    
+    %% Garis menuju Logout
+    KelolaBuku --> Logout[Keluar dari Sistem / Logout]
+    KelolaKat --> Logout
+    KelolaMem --> Logout
+    KelolaPinjam --> Logout
+    
+    Pinjam --> Logout
+    Riwayat --> Logout
+    Denda --> Logout
+    Profil --> Logout
+    
+    Logout --> End([Selesai])
 ```
