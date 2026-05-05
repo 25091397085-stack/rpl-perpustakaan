@@ -312,3 +312,79 @@ flowchart TD
     
     Logout --> End([Selesai])
 ```
+
+## 7. Database Diagram (DBML)
+
+Bagian ini mendefinisikan struktur *database* perpustakaan secara utuh berdasarkan file _Migration_ Laravel, menggunakan sintaks DBML (Database Markup Language). 
+
+```dbml
+Table users {
+  id integer [primary key]
+  name varchar
+  email varchar [unique]
+  email_verified_at timestamp
+  password varchar
+  remember_token varchar
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table categories {
+  id integer [primary key]
+  name varchar
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table books {
+  id integer [primary key]
+  category_id integer [not null]
+  cover varchar
+  title varchar
+  author varchar
+  stock integer
+  sinopsis varchar
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table members {
+  id integer [primary key]
+  user_id integer [not null]
+  member_code integer [unique]
+  name varchar
+  email varchar [unique]
+  address varchar
+  phone varchar [unique]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table borrowings {
+  id integer [primary key]
+  book_id integer [not null]
+  member_id integer [not null]
+  borrow_date date
+  due_date date
+  return_date date [null]
+  status varchar [note: "enum('sudah dikembalikan', 'belum dikembalikan', 'terlambat')"]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table fines {
+  id integer [primary key]
+  borrowing_id integer [not null]
+  amount integer
+  payment_status varchar [note: "enum('belum dibayar', 'sudah dibayar')"]
+  created_at timestamp
+  updated_at timestamp
+}
+
+// Relasi (Relationships)
+Ref: books.category_id > categories.id // Many-to-One
+Ref: members.user_id - users.id // One-to-One
+Ref: borrowings.book_id > books.id // Many-to-One
+Ref: borrowings.member_id > members.id // Many-to-One
+Ref: fines.borrowing_id - borrowings.id // One-to-One
+```
