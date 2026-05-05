@@ -477,26 +477,46 @@ Ref: fines.borrowing_id - borrowings.id // One-to-One
 
 Sistem telah diuji menggunakan framework pengujian terintegrasi bawaan Laravel (Pest/PHPUnit) dengan database `mini_projek_testing` MySQL. Seluruh skenario pengujian utama (31 pengujian, 74 asersi) telah menunjukkan hasil **Lulus (PASS)** tanpa ada *error* atau ketidakcocokan.
 
-Berikut adalah rekapitulasi ceklis fungsionalitas dan logika pengujian fitur-fitur pada aplikasi:
+Berikut adalah rekapitulasi pengujian fitur-fitur pada aplikasi berdasarkan standar spesifikasi:
 
-| Status | Modul / Class Test | Nama Tes | Deskripsi & Tujuan Pengujian |
-| :---: | --- | --- | --- |
-| ✅ | `Unit\ExampleTest` | `that true is true` | Memastikan *environment* testing dasar berjalan dengan baik. |
-| ✅ | `Auth\AuthenticationTest` | `login screen can be rendered` | Memastikan rute/halaman login berhasil dimuat (Status 200). |
-| ✅ | `Auth\AuthenticationTest` | `users can authenticate using the login screen` | Memastikan member dapat login dengan sukses dan sistem akan me-*redirect* mereka ke dashboard *member*. |
-| ✅ | `Auth\AuthenticationTest` | `users can not authenticate with invalid password` | Memblokir masuknya pengguna (status *Guest*) jika mereka menginputkan *password* yang salah. |
-| ✅ | `Auth\AuthenticationTest` | `users can logout` | Memastikan sesi pengguna berhasil dibersihkan/dihancurkan ketika melakukan *logout*. |
-| ✅ | `Auth\EmailVerificationTest` | *(Seluruh Tes Verifikasi Email)* | Menguji kelancaran alur token verifikasi kepemilikan alamat email. |
-| ✅ | `Auth\PasswordConfirmationTest` | *(Seluruh Tes Konfirmasi Password)* | Memastikan rute yang meminta konfirmasi ulang *password* menolak *input* yang salah. |
-| ✅ | `Auth\PasswordResetTest` | *(Seluruh Tes Reset Password)* | Menguji sistem pembuatan token lupa *password* dan proses pengaturan ulang *password*. |
-| ✅ | `Auth\PasswordUpdateTest` | *(Seluruh Tes Update Password)* | Memastikan validasi *password* lama diisi dengan tepat sebelum profil menyimpannya. |
-| ✅ | `Auth\RegistrationTest` | `registration screen can be rendered` | Halaman pendaftaran member berhasil ditampilkan. |
-| ✅ | `Auth\RegistrationTest` | `new users can register` | Pengguna baru bisa registrasi. Sistem membuat record *User* dan *Member* berelasi sekaligus, menugaskan Role 'member', lalu mengarahkan profil baru ke `/login`. |
-| ✅ | `BorrowingLateTest` | `late borrowing creates fine` | Validasi kunci: Menguji jika buku terlambat dikembalikan, sistem secara otomatis *insert* denda (*Fine*) ke database. |
-| ✅ | `BorrowingLateTest` | `not late borrowing no fine` | Memastikan jika buku dikembalikan sebelum/tepat pada *due_date*, tidak ada denda yang tercatat. |
-| ✅ | `BorrowingLateTest` | `fine amount calculation correct` | Validasi aritmatika denda: Memastikan jumlah hari terlambat (selisih hari) dikali tarif denda (Rp3.000) terhitung akurat. |
-| ✅ | `BorrowingLateTest` | `fine payment status update` | Memastikan rute pembayaran sukses mengubah nilai *payment_status* dari "belum dibayar" menjadi "sudah dibayar". |
-| ✅ | `BorrowingLateTest` | `borrowing status late` | Memastikan sistem sukses memperbarui status peminjaman induk menjadi "terlambat" setelah kalkulasi denda diproses. |
-| ✅ | `BorrowingLateTest` | `fine relationship to borrowing` | Memverifikasi relasi model `borrowing()` pada denda memanggil kelas dan ID yang tepat. |
-| ✅ | `Feature\ExampleTest` | `it returns a successful response` | Memastikan halaman *root* (`/`) di konfigurasi untuk meredirect tamu dengan status 302. |
-| ✅ | `Feature\ProfileTest` | *(Seluruh Tes Pengelolaan Profil)* | Memastikan pengguna bisa melihat data profil, meng-*update* nama/email, dan *delete account* secara fungsional. |
+### Requirement
+| Requirement ID | Requirement |
+|---|---|
+| FR-01 | Sistem harus mengizinkan pengguna untuk mendaftar akun baru dan menyimpannya ke tabel member. |
+| FR-02 | Sistem harus mengizinkan pengguna login menggunakan *email* dan *password* yang valid. |
+| FR-03 | Sistem harus menolak login jika *email* atau *password* salah. |
+| FR-04 | Sistem harus mengarahkan pengguna yang berhasil login ke halaman dashboard yang sesuai. |
+| FR-05 | Admin dapat mengelola data master (Kategori, Buku, dan Member) termasuk menambah, mengubah, dan menghapus. |
+| FR-06 | Sistem harus memblokir akses member biasa dari fitur pengelolaan data master. |
+| FR-07 | Member dapat meminjam maksimal 3 buku dan stok buku harus otomatis berkurang. |
+| FR-08 | Sistem harus menolak peminjaman jika stok habis atau kuota maksimal member telah tercapai. |
+| FR-09 | Admin dapat memproses pengembalian buku, yang akan menambah kembali stok buku. |
+| FR-10 | Sistem otomatis menghitung denda (Rp3.000/hari) jika buku dikembalikan melewati batas waktu (*due date*). |
+| FR-11 | Admin dapat memverifikasi pembayaran denda dan status tagihan berubah menjadi "sudah dibayar". |
+
+### Test Scenario
+| Scenario ID | Requirement ID | Test Scenario |
+|---|---|---|
+| TS-AUTH-01 | FR-01, FR-02, FR-04 | Pendaftaran dan Autentikasi Login Pengguna dengan data valid |
+| TS-AUTH-02 | FR-03 | Autentikasi Login dengan data tidak valid |
+| TS-ADMIN-01 | FR-05, FR-06 | Manajemen Data Master (CRUD Kategori, Buku, Member) oleh Admin |
+| TS-BORROW-01 | FR-07, FR-08 | Proses Pengajuan Peminjaman Buku oleh Member |
+| TS-RETURN-01 | FR-09, FR-10, FR-11 | Proses Pengembalian Buku, Kalkulasi Denda, dan Pembayaran |
+
+### Test Condition
+| Condition ID | Scenario ID | Test Condition | Status |
+|---|---|---|---|
+| TCOND-01 | TS-AUTH-01 | Pendaftaran akun baru dengan data lengkap (`Auth\RegistrationTest`) | ✅ PASS |
+| TCOND-02 | TS-AUTH-01 | Login dengan data valid dan redirect ke dashboard (`Auth\AuthenticationTest`) | ✅ PASS |
+| TCOND-03 | TS-AUTH-02 | Login dengan *password* salah ditolak (`Auth\AuthenticationTest`) | ✅ PASS |
+| TCOND-04 | TS-ADMIN-01 | Admin membuat, mengubah, dan menghapus Kategori (`CategoryFeatureTest`) | ✅ PASS |
+| TCOND-05 | TS-ADMIN-01 | Admin membuat buku baru dan memperbarui stok beserta cover (`BookFeatureTest`) | ✅ PASS |
+| TCOND-06 | TS-ADMIN-01 | Admin menghapus data member dari database (`MemberFeatureTest`) | ✅ PASS |
+| TCOND-07 | TS-ADMIN-01 | Member biasa ditolak mengakses halaman CRUD Master Data (Status 403) | ✅ PASS |
+| TCOND-08 | TS-BORROW-01 | Member meminjam buku dan stok berkurang (`BorrowingActionTest`) | ✅ PASS |
+| TCOND-09 | TS-BORROW-01 | Member ditolak meminjam jika stok buku 0 (`BorrowingActionTest`) | ✅ PASS |
+| TCOND-10 | TS-BORROW-01 | Member ditolak meminjam buku ke-4 saat kuota penuh (`BorrowingActionTest`) | ✅ PASS |
+| TCOND-11 | TS-RETURN-01 | Admin memproses pengembalian tanpa denda dan stok bertambah | ✅ PASS |
+| TCOND-12 | TS-RETURN-01 | Pengembalian terlambat otomatis membuat baris denda (`BorrowingLateTest`) | ✅ PASS |
+| TCOND-13 | TS-RETURN-01 | Validasi perhitungan nominal denda akurat di MySQL (`BorrowingLateTest`) | ✅ PASS |
+| TCOND-14 | TS-RETURN-01 | Mengubah status *payment* denda menjadi "sudah dibayar" | ✅ PASS |
