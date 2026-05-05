@@ -61,6 +61,103 @@ graph TD
     System -- "Katalog Buku, Status Peminjaman,\nTagihan Denda" --> Member
 ```
 
+## 5. Sequence Diagram
+
+Berikut adalah diagram sekuensial (Sequence Diagram) yang memodelkan interaksi antara aktor (User/Admin/Member) dan sistem perpustakaan dari awal proses hingga operasi terselesaikan ke database.
+
+### 5.1. Sequence Diagram Login
+Alur saat pengguna (Admin atau Member) melakukan autentikasi ke dalam sistem.
+
+```mermaid
+sequenceDiagram
+    actor User as Admin / Member
+    participant System as Sistem Perpustakaan
+    participant DB as Database
+
+    User->>System: Input Email & Password (Login)
+    System->>DB: Query User berdasarkan Email
+    DB-->>System: Return Data User & Password Hash
+    System->>System: Validasi Password & Role (Auth)
+    alt Kredensial Valid
+        System->>User: Redirect ke Dashboard (Sesuai Role)
+    else Kredensial Tidak Valid
+        System-->>User: Tampilkan Error (Kredensial salah)
+    end
+```
+
+### 5.2. Sequence Diagram Peminjaman Buku
+Alur ketika Member mengajukan peminjaman sebuah buku dari katalog.
+
+```mermaid
+sequenceDiagram
+    actor Member
+    participant Controller as BorrowingController
+    participant DB as Database
+
+    Member->>Controller: Request Borrow Buku (book_id)
+    Controller->>DB: Cek Data Member (limit pinjaman aktif)
+    DB-->>Controller: Return Jumlah Peminjaman (Max 3)
+    
+    Controller->>DB: Cek Ketersediaan Stok Buku
+    DB-->>Controller: Return Stok Buku (> 0)
+    
+    alt Validasi Gagal (Limit tercapai atau Stok habis)
+        Controller-->>Member: Return Error Message (Kembali ke halaman sebelumnya)
+    else Validasi Berhasil
+        Controller->>DB: Insert Data Borrowing (status: belum dikembalikan)
+        Controller->>DB: Update Table Book (stock - 1)
+        DB-->>Controller: Konfirmasi Commit Transaksi
+        Controller-->>Member: Return Success Message (Buku dipinjam)
+    end
+```
+
+### 5.3. Sequence Diagram Pengembalian Buku
+Alur ketika Admin memproses pengembalian buku dari Member, yang juga akan mengecek apakah terjadi keterlambatan dan secara otomatis membuat denda.
+
+```mermaid
+sequenceDiagram
+    actor Admin
+    participant Controller as BorrowingController
+    participant DB as Database
+
+    Admin->>Controller: Klik Return Buku (borrowing_id)
+    Controller->>DB: Ambil Data Peminjaman (due_date)
+    DB-->>Controller: Return Data Peminjaman
+    
+    Controller->>Controller: Cek Keterlambatan (today_date > due_date)
+    
+    alt Terlambat
+        Controller->>Controller: Hitung kalkulasi denda (selisih hari * Rp 3000)
+        Controller->>DB: Insert Data Fine (amount, payment_status: belum dibayar)
+        Controller->>DB: Update Status Borrowing (status: terlambat, return_date)
+    else Tepat Waktu
+        Controller->>DB: Update Status Borrowing (status: sudah dikembalikan, return_date)
+    end
+    
+    Controller->>DB: Update Table Book (stock + 1, status: tersedia)
+    DB-->>Controller: Konfirmasi Update Berhasil
+    Controller-->>Admin: Return Success Message (+ Info nominal denda jika ada)
+```
+
+### 5.4. Sequence Diagram Pembayaran Denda
+Alur ketika Member melihat daftar denda dan menekan tombol pembayaran pada suatu tanggungan denda.
+
+```mermaid
+sequenceDiagram
+    actor Member
+    participant Controller as FineController
+    participant DB as Database
+
+    Member->>Controller: Lihat Halaman Denda (/fines)
+    Controller->>DB: Query tabel Fines khusus untuk member_id tersebut
+    DB-->>Controller: Return Koleksi Denda
+    Controller-->>Member: Tampilkan View Daftar Denda
+    
+    Member->>Controller: Klik Bayar Denda (fine_id)
+    Controller->>DB: Update Data Fine (payment_status: sudah dibayar)
+    DB-->>Controller: Konfirmasi Update
+    Controller-->>Member: Return Success Message (Pembayaran denda berhasil)
+```
 ### DFD Level 1
 Memecah Sistem Utama ke dalam proses-proses inti (Manajemen Master, Peminjaman, dan Denda).
 
