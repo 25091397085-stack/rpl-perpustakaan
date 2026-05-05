@@ -48,17 +48,19 @@ graph TD
     %% Entitas Eksternal
     Admin((Admin))
     Member((Member))
+    Guest((Guest))
 
     %% Sistem
     System{{"Sistem Informasi\nPerpustakaan"}}
 
-    %% Aliran Data Admin
-    Admin -- "Data Buku, Data Kategori,\nData Member, Konfirmasi Pengembalian" --> System
-    System -- "Laporan Peminjaman,\nStatus Denda, Statistik Dashboard" --> Admin
+    %% Aliran Data
+    Guest -- "Data Registrasi" --> System
+    
+    Admin -- "Kredensial Login, Data Buku, Data Kategori,\nData Member, Konfirmasi Pengembalian" --> System
+    System -- "Status Autentikasi, Laporan Peminjaman,\nStatus Denda, Statistik Dashboard" --> Admin
 
-    %% Aliran Data Member
-    Member -- "Request Peminjaman,\nPelunasan Denda, Update Profil" --> System
-    System -- "Katalog Buku, Status Peminjaman,\nTagihan Denda" --> Member
+    Member -- "Kredensial Login, Request Peminjaman,\nPelunasan Denda, Update Profil" --> System
+    System -- "Status Autentikasi, Katalog Buku, Status Peminjaman,\nTagihan Denda" --> Member
 ```
 
 ### DFD Level 1
@@ -71,15 +73,26 @@ graph TD
     Member((Member))
 
     %% Proses
+    P0(("0.0\nAutentikasi\n& Registrasi"))
     P1(("1.0\nManajemen\nMaster Data"))
     P2(("2.0\nProses\nPeminjaman"))
     P3(("3.0\nProses\nPengembalian\n& Denda"))
 
     %% Data Stores
+    DS0[("D0: Users")]
     DS1[("D1: Books &\nCategories")]
     DS2[("D2: Members")]
     DS3[("D3: Borrowings")]
     DS4[("D4: Fines")]
+
+    %% Aliran Autentikasi & Registrasi
+    Guest((Guest)) -- "Form Registrasi" --> P0
+    Admin -- "Kredensial Login" --> P0
+    Member -- "Kredensial Login" --> P0
+    P0 -- "Status Autentikasi" --> Admin
+    P0 -- "Status Autentikasi" --> Member
+    P0 <--> DS0
+    P0 -- "Insert Profil" --> DS2
 
     %% Aliran dari/ke Admin
     Admin -- "Input Data Buku/Kategori" --> P1
@@ -116,6 +129,37 @@ graph TD
 
 ### DFD Level 2 (Rincian Proses)
 Memecah masing-masing proses utama pada DFD Level 1 menjadi sub-proses yang lebih detail.
+
+#### DFD Level 2 - Proses 0.0 (Autentikasi & Registrasi)
+```mermaid
+graph TD
+    Guest((Guest))
+    Admin((Admin))
+    Member((Member))
+    
+    0_1(("0.1\nRegistrasi\nAkun Baru"))
+    0_2(("0.2\nVerifikasi\nLogin"))
+    0_3(("0.3\nManajemen\nSesi (Logout)"))
+    
+    DS0[("D0: Users")]
+    DS2[("D2: Members")]
+    
+    Guest -- "Input Data Diri" --> 0_1
+    0_1 -- "Insert Akun" --> DS0
+    0_1 -- "Insert Profil" --> DS2
+    
+    Admin -- "Input Kredensial" --> 0_2
+    Member -- "Input Kredensial" --> 0_2
+    
+    0_2 -- "Validasi Email/Pass" --> DS0
+    0_2 -- "Token Sesi Aktif" --> Admin
+    0_2 -- "Token Sesi Aktif" --> Member
+    
+    Admin -- "Request Logout" --> 0_3
+    Member -- "Request Logout" --> 0_3
+    0_3 -- "Hapus Sesi" --> Admin
+    0_3 -- "Hapus Sesi" --> Member
+```
 
 #### DFD Level 2 - Proses 1.0 (Manajemen Master Data)
 ```mermaid
