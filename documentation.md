@@ -470,3 +470,33 @@ Ref: fines.borrowing_id - borrowings.id // One-to-One
 
 ### Visualisasi ERD (Entity Relationship Diagram)
 ![ERD Database](public/erd.png)
+
+---
+
+## 8. Laporan Pengujian (Testing)
+
+Sistem telah diuji menggunakan framework pengujian terintegrasi bawaan Laravel (Pest/PHPUnit) dengan database `mini_projek_testing` MySQL. Seluruh skenario pengujian utama (31 pengujian, 74 asersi) telah menunjukkan hasil **Lulus (PASS)** tanpa ada *error* atau ketidakcocokan.
+
+Berikut adalah rekapitulasi ceklis fungsionalitas dan logika pengujian fitur-fitur pada aplikasi:
+
+| Status | Modul / Class Test | Nama Tes | Deskripsi & Tujuan Pengujian |
+| :---: | --- | --- | --- |
+| ✅ | `Unit\ExampleTest` | `that true is true` | Memastikan *environment* testing dasar berjalan dengan baik. |
+| ✅ | `Auth\AuthenticationTest` | `login screen can be rendered` | Memastikan rute/halaman login berhasil dimuat (Status 200). |
+| ✅ | `Auth\AuthenticationTest` | `users can authenticate using the login screen` | Memastikan member dapat login dengan sukses dan sistem akan me-*redirect* mereka ke dashboard *member*. |
+| ✅ | `Auth\AuthenticationTest` | `users can not authenticate with invalid password` | Memblokir masuknya pengguna (status *Guest*) jika mereka menginputkan *password* yang salah. |
+| ✅ | `Auth\AuthenticationTest` | `users can logout` | Memastikan sesi pengguna berhasil dibersihkan/dihancurkan ketika melakukan *logout*. |
+| ✅ | `Auth\EmailVerificationTest` | *(Seluruh Tes Verifikasi Email)* | Menguji kelancaran alur token verifikasi kepemilikan alamat email. |
+| ✅ | `Auth\PasswordConfirmationTest` | *(Seluruh Tes Konfirmasi Password)* | Memastikan rute yang meminta konfirmasi ulang *password* menolak *input* yang salah. |
+| ✅ | `Auth\PasswordResetTest` | *(Seluruh Tes Reset Password)* | Menguji sistem pembuatan token lupa *password* dan proses pengaturan ulang *password*. |
+| ✅ | `Auth\PasswordUpdateTest` | *(Seluruh Tes Update Password)* | Memastikan validasi *password* lama diisi dengan tepat sebelum profil menyimpannya. |
+| ✅ | `Auth\RegistrationTest` | `registration screen can be rendered` | Halaman pendaftaran member berhasil ditampilkan. |
+| ✅ | `Auth\RegistrationTest` | `new users can register` | Pengguna baru bisa registrasi. Sistem membuat record *User* dan *Member* berelasi sekaligus, menugaskan Role 'member', lalu mengarahkan profil baru ke `/login`. |
+| ✅ | `BorrowingLateTest` | `late borrowing creates fine` | Validasi kunci: Menguji jika buku terlambat dikembalikan, sistem secara otomatis *insert* denda (*Fine*) ke database. |
+| ✅ | `BorrowingLateTest` | `not late borrowing no fine` | Memastikan jika buku dikembalikan sebelum/tepat pada *due_date*, tidak ada denda yang tercatat. |
+| ✅ | `BorrowingLateTest` | `fine amount calculation correct` | Validasi aritmatika denda: Memastikan jumlah hari terlambat (selisih hari) dikali tarif denda (Rp3.000) terhitung akurat. |
+| ✅ | `BorrowingLateTest` | `fine payment status update` | Memastikan rute pembayaran sukses mengubah nilai *payment_status* dari "belum dibayar" menjadi "sudah dibayar". |
+| ✅ | `BorrowingLateTest` | `borrowing status late` | Memastikan sistem sukses memperbarui status peminjaman induk menjadi "terlambat" setelah kalkulasi denda diproses. |
+| ✅ | `BorrowingLateTest` | `fine relationship to borrowing` | Memverifikasi relasi model `borrowing()` pada denda memanggil kelas dan ID yang tepat. |
+| ✅ | `Feature\ExampleTest` | `it returns a successful response` | Memastikan halaman *root* (`/`) di konfigurasi untuk meredirect tamu dengan status 302. |
+| ✅ | `Feature\ProfileTest` | *(Seluruh Tes Pengelolaan Profil)* | Memastikan pengguna bisa melihat data profil, meng-*update* nama/email, dan *delete account* secara fungsional. |

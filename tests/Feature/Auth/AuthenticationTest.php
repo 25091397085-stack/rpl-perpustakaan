@@ -10,6 +10,8 @@ test('login screen can be rendered', function () {
 
 test('users can authenticate using the login screen', function () {
     $user = User::factory()->create();
+    $role = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'member']);
+    $user->assignRole($role);
 
     $response = $this->post('/login', [
         'email' => $user->email,
@@ -17,7 +19,7 @@ test('users can authenticate using the login screen', function () {
     ]);
 
     $this->assertAuthenticated();
-    $response->assertRedirect(route('members.index', absolute: false));
+    $response->assertRedirect(route('member.home'));
 });
 
 test('users can not authenticate with invalid password', function () {

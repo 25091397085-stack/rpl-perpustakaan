@@ -12,8 +12,10 @@ test('new users can register', function () {
         'email' => 'test@example.com',
         'password' => 'password',
         'password_confirmation' => 'password',
+        'address' => 'Test Address',
+        'phone' => '08123456789',
     ]);
 
-    $this->assertAuthenticated();
-    $response->assertRedirect(route('members.index', absolute: false));
+    $this->assertGuest();
+    $response->assertRedirect(route('login'));
 });

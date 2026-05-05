@@ -8,9 +8,12 @@ use App\Models\Member;
 use App\Models\Fine;
 use Carbon\Carbon;
 use Tests\TestCase;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
 class BorrowingLateTest extends TestCase
 {
+  use RefreshDatabase;
+
   protected $borrowing;
   protected $book;
   protected $member;
@@ -19,15 +22,40 @@ class BorrowingLateTest extends TestCase
   {
     parent::setUp();
 
+    // Buat User dan Category terlebih dahulu karena ada Foreign Key constraint di MySQL
+    $user = \App\Models\User::firstOrCreate(
+        ['id' => 1],
+        ['name' => 'Test User', 'email' => 'test_user_for_borrowing@example.com', 'password' => bcrypt('password')]
+    );
+
+    $category = \App\Models\Category::firstOrCreate(
+        ['id' => 1],
+        ['name' => 'Test Category']
+    );
+
     // Siapkan data test
     $this->book = Book::firstOrCreate(
       ['id' => 999],
-      ['name' => 'Test Book', 'author' => 'Test Author', 'stock' => 10]
+      [
+          'category_id' => $category->id,
+          'title' => 'Test Book', 
+          'author' => 'Test Author', 
+          'cover' => 'test.jpg',
+          'stock' => 10,
+          'sinopsis' => 'Sinopsis test'
+      ]
     );
 
     $this->member = Member::firstOrCreate(
       ['id' => 999],
-      ['user_id' => 1, 'phone' => '08123456789', 'address' => 'Test Address']
+      [
+          'user_id' => $user->id, 
+          'member_code' => 9999,
+          'name' => 'Member Test',
+          'email' => 'member_borrowing@example.com',
+          'phone' => '0812345678999', 
+          'address' => 'Test Address'
+      ]
     );
   }
 
@@ -47,7 +75,7 @@ class BorrowingLateTest extends TestCase
     ]);
 
     // Calculate late days
-    $lateDays = Carbon::parse($borrowing->due_date)
+    $lateDays = (int) Carbon::parse($borrowing->due_date)
       ->diffInDays(Carbon::parse($borrowing->return_date));
     $fineAmount = $lateDays * 3000;
 
@@ -113,7 +141,7 @@ class BorrowingLateTest extends TestCase
     ]);
 
     // Calculate
-    $lateDays = Carbon::parse($borrowing->due_date)
+    $lateDays = (int) Carbon::parse($borrowing->due_date)
       ->diffInDays(Carbon::parse($borrowing->return_date));
     $expectedFineAmount = $lateDays * 3000;
 
