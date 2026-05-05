@@ -61,6 +61,138 @@ graph TD
     System -- "Katalog Buku, Status Peminjaman,\nTagihan Denda" --> Member
 ```
 
+### DFD Level 1
+Memecah Sistem Utama ke dalam proses-proses inti (Manajemen Master, Peminjaman, dan Denda).
+
+```mermaid
+graph TD
+    %% Entitas Eksternal
+    Admin((Admin))
+    Member((Member))
+
+    %% Proses
+    P1(("1.0\nManajemen\nMaster Data"))
+    P2(("2.0\nProses\nPeminjaman"))
+    P3(("3.0\nProses\nPengembalian\n& Denda"))
+
+    %% Data Stores
+    DS1[("D1: Books &\nCategories")]
+    DS2[("D2: Members")]
+    DS3[("D3: Borrowings")]
+    DS4[("D4: Fines")]
+
+    %% Aliran dari/ke Admin
+    Admin -- "Input Data Buku/Kategori" --> P1
+    Admin -- "Input Data Member" --> P1
+    P1 -- "Info Buku & Kategori" --> Admin
+    
+    Admin -- "Konfirmasi Return/Late" --> P3
+    P3 -- "Laporan Peminjaman/Denda" --> Admin
+
+    %% Aliran dari/ke Member
+    Member -- "Pilih Buku" --> P2
+    P2 -- "Notifikasi Berhasil/Gagal" --> Member
+    
+    P3 -- "Tagihan Denda" --> Member
+    Member -- "Konfirmasi Bayar Denda" --> P3
+
+    %% Interaksi dengan Data Store (Master Data)
+    P1 <--> DS1
+    P1 <--> DS2
+
+    %% Interaksi Peminjaman
+    P2 -- "Cek Ketersediaan" --> DS1
+    P2 -- "Cek Kuota Pinjam" --> DS2
+    P2 -- "Update Stok (-1)" --> DS1
+    P2 -- "Insert Record" --> DS3
+
+    %% Interaksi Pengembalian & Denda
+    P3 -- "Update Status & Return Date" --> DS3
+    P3 -- "Update Stok (+1)" --> DS1
+    P3 -- "Hitung Keterlambatan &\nInsert Denda" --> DS4
+    DS3 -- "Ambil Data Peminjaman\n& Due Date" --> P3
+    DS4 -- "Ambil Data Denda" --> P3
+```
+
+### DFD Level 2 (Rincian Proses)
+Memecah masing-masing proses utama pada DFD Level 1 menjadi sub-proses yang lebih detail.
+
+#### DFD Level 2 - Proses 1.0 (Manajemen Master Data)
+```mermaid
+graph TD
+    Admin((Admin))
+    
+    1_1(("1.1\nKelola\nKategori"))
+    1_2(("1.2\nKelola\nBuku"))
+    1_3(("1.3\nKelola\nMember"))
+    
+    DS1[("D1: Books &\nCategories")]
+    DS2[("D2: Members")]
+    
+    Admin -- "Input/Edit/Hapus\nKategori" --> 1_1
+    1_1 -- "Update Data\nKategori" --> DS1
+    
+    Admin -- "Input/Edit/Hapus\nBuku" --> 1_2
+    1_2 -- "Baca Kategori" --> DS1
+    1_2 -- "Update Data\nBuku" --> DS1
+    
+    Admin -- "Input/Edit/Hapus\nMember" --> 1_3
+    1_3 -- "Update Data\nMember" --> DS2
+```
+
+#### DFD Level 2 - Proses 2.0 (Proses Peminjaman)
+```mermaid
+graph TD
+    Member((Member))
+    
+    2_1(("2.1\nValidasi\nPeminjaman"))
+    2_2(("2.2\nSimpan\nTransaksi"))
+    2_3(("2.3\nKurangi\nStok Buku"))
+    
+    DS1[("D1: Books")]
+    DS2[("D2: Members")]
+    DS3[("D3: Borrowings")]
+    
+    Member -- "Request Pinjam" --> 2_1
+    2_1 -- "Cek Kuota (< 3)" --> DS2
+    2_1 -- "Cek Stok (> 0)" --> DS1
+    
+    2_1 -- "Validasi Valid" --> 2_2
+    2_2 -- "Insert Peminjaman" --> DS3
+    
+    2_2 -- "Trigger Update" --> 2_3
+    2_3 -- "Stok - 1" --> DS1
+    
+    2_2 -- "Konfirmasi Sukses" --> Member
+```
+
+#### DFD Level 2 - Proses 3.0 (Proses Pengembalian & Denda)
+```mermaid
+graph TD
+    Admin((Admin))
+    Member((Member))
+    
+    3_1(("3.1\nVerifikasi\nPengembalian"))
+    3_2(("3.2\nKalkulasi\nDenda"))
+    3_3(("3.3\nProses\nPembayaran"))
+    
+    DS1[("D1: Books")]
+    DS3[("D3: Borrowings")]
+    DS4[("D4: Fines")]
+    
+    Admin -- "Klik Return" --> 3_1
+    3_1 -- "Update Status & Return Date" --> DS3
+    3_1 -- "Update Stok (+1)" --> DS1
+    
+    3_1 -- "Cek Due Date" --> 3_2
+    3_2 -- "Baca Due Date" --> DS3
+    3_2 -- "Jika Terlambat,\nInsert Denda" --> DS4
+    
+    Member -- "Pilih Bayar Denda" --> 3_3
+    3_3 -- "Baca Data Denda" --> DS4
+    3_3 -- "Update Status\n(Sudah Dibayar)" --> DS4
+```
+
 ## 5. Sequence Diagram
 
 Berikut adalah diagram sekuensial (Sequence Diagram) yang memodelkan interaksi antara aktor (User/Admin/Member) dan sistem perpustakaan dari awal proses hingga operasi terselesaikan ke database.
@@ -158,59 +290,6 @@ sequenceDiagram
     DB-->>Controller: Konfirmasi Update
     Controller-->>Member: Tampilkan Pesan Sukses (Pembayaran denda berhasil)
 ```
-### DFD Level 1
-Memecah Sistem Utama ke dalam proses-proses inti (Manajemen Master, Peminjaman, dan Denda).
-
-```mermaid
-graph TD
-    %% Entitas Eksternal
-    Admin((Admin))
-    Member((Member))
-
-    %% Proses
-    P1(("1.0\nManajemen\nMaster Data"))
-    P2(("2.0\nProses\nPeminjaman"))
-    P3(("3.0\nProses\nPengembalian\n& Denda"))
-
-    %% Data Stores
-    DS1[("D1: Books &\nCategories")]
-    DS2[("D2: Members")]
-    DS3[("D3: Borrowings")]
-    DS4[("D4: Fines")]
-
-    %% Aliran dari/ke Admin
-    Admin -- "Input Data Buku/Kategori" --> P1
-    Admin -- "Input Data Member" --> P1
-    P1 -- "Info Buku & Kategori" --> Admin
-    
-    Admin -- "Konfirmasi Return/Late" --> P3
-    P3 -- "Laporan Peminjaman/Denda" --> Admin
-
-    %% Aliran dari/ke Member
-    Member -- "Pilih Buku" --> P2
-    P2 -- "Notifikasi Berhasil/Gagal" --> Member
-    
-    P3 -- "Tagihan Denda" --> Member
-    Member -- "Konfirmasi Bayar Denda" --> P3
-
-    %% Interaksi dengan Data Store (Master Data)
-    P1 <--> DS1
-    P1 <--> DS2
-
-    %% Interaksi Peminjaman
-    P2 -- "Cek Ketersediaan" --> DS1
-    P2 -- "Cek Kuota Pinjam" --> DS2
-    P2 -- "Update Stok (-1)" --> DS1
-    P2 -- "Insert Record" --> DS3
-
-    %% Interaksi Pengembalian & Denda
-    P3 -- "Update Status & Return Date" --> DS3
-    P3 -- "Update Stok (+1)" --> DS1
-    P3 -- "Hitung Keterlambatan &\nInsert Denda" --> DS4
-    DS3 -- "Ambil Data Peminjaman\n& Due Date" --> P3
-    DS4 -- "Ambil Data Denda" --> P3
-```
-
 ## 6. Activity Diagram & Flowchart
 
 Bagian ini memodelkan alur kerja (workflow) menggunakan diagram aktivitas yang difokuskan pada aktor (menggunakan konsep *swimlanes*) dan juga bagan alir (flowchart) keseluruhan aplikasi.
@@ -388,3 +467,6 @@ Ref: borrowings.book_id > books.id // Many-to-One
 Ref: borrowings.member_id > members.id // Many-to-One
 Ref: fines.borrowing_id - borrowings.id // One-to-One
 ```
+
+### Visualisasi ERD (Entity Relationship Diagram)
+![ERD Database](public/erd.png)
